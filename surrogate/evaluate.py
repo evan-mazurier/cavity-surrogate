@@ -4,7 +4,7 @@ Evaluate both surrogates against the solver on Re values they never trained on.
   holdout  — inside the training range, interleaved with the training points
   extrap   — outside it (30, 40 and 1750–2500)
 
-For each case and model: relative L2 error of the (u, v) field, max centred divergence (against the
+For each case and model: relative L2 error of the (u, v) field, RMS centred divergence (against the
 solver's own centred-field baseline), and the vortex-centre offset. Writes figures/surrogate_error.png
 (error vs Re, training range shaded) and figures/surrogate_fields.png (one held-out case, side by side),
 and prints the summary table.
@@ -63,7 +63,7 @@ def table(rows, models, title):
 def plot_error(models, rows_tr, rows_ho, rows_ex, lo, hi, path):
     fig, ax = plt.subplots(figsize=(9, 4.6)); fig.patch.set_facecolor("white")
     ax.axvspan(lo, hi, color="#eef1fb", zorder=0)
-    ax.text((lo * hi) ** 0.5, 0.9, "training range", color=MUTED, fontsize=9, ha="center", va="top", transform=ax.get_xaxis_transform())
+    ax.text((lo * hi) ** 0.5, 0.02, "training range", color=MUTED, fontsize=9, ha="center", va="bottom", transform=ax.get_xaxis_transform())
     for name, col in zip(models, (C_POD, C_CNN)):
         rows = sorted(rows_ho + rows_ex, key=lambda r: r["re"])
         ax.plot([r["re"] for r in rows], [r["err_" + name] for r in rows], "-", color=col, lw=1.2, alpha=0.5, zorder=2)
@@ -79,7 +79,7 @@ def plot_error(models, rows_tr, rows_ho, rows_ex, lo, hi, path):
     for s in ("top", "right"): ax.spines[s].set_visible(False)
     for s in ("left", "bottom"): ax.spines[s].set_color(GRID)
     ax.tick_params(colors=MUTED, which="both")
-    ax.legend(frameon=False, fontsize=9, ncol=2, loc="upper center")
+    ax.legend(frameon=False, fontsize=9, ncol=2, loc="center")
     fig.tight_layout(); fig.savefig(path, dpi=140); print(f"  wrote {path}")
 
 
@@ -97,6 +97,15 @@ def plot_fields(models, re, path):
         ax.set_title(f"{name}  Re = {re:g}" + ("" if name == "solver" else f"   rel-L2 {data.rel_l2(f, true):.1e}"),
                      color=INK, fontsize=10, loc="left")
     axes[1, 0].axis("off")
+    caption = ("Top: streamfunction (blue ψ < 0, orange ψ > 0).",
+               "Bottom: |error| of (u, v) against the solver.",
+               "",
+               "POD is indistinguishable from the solver.",
+               "The CNN's error norm is small, yet it invents",
+               "structure along the side walls that is not",
+               "there — a low error can still hide wrong physics.")
+    axes[1, 0].text(0.0, 0.95, chr(10).join(caption), transform=axes[1, 0].transAxes, va="top",
+                    color=MUTED, fontsize=9.5, linespacing=1.5)
     vmax = max(abs(p - true).max() for p in preds.values())
     for ax, (name, f) in zip(axes[1, 1:], cols[1:]):
         err = np.hypot(*(f - true))

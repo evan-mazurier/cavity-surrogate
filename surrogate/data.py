@@ -38,14 +38,15 @@ def rel_l2(pred, true):
 
 
 def centred_divergence(field):
-    """∇·u from the cell-centred field by central differences (interior). The solver's own
-    centred field has a small non-zero value here (it is exactly divergence-free on the staggered
-    grid, not on centres) — so compare a prediction to THAT baseline, not to zero."""
+    """RMS of ∇·u from the cell-centred field by central differences, away from the walls. The
+    solver's own centred field has a small non-zero value here (it is exactly divergence-free on the
+    staggered grid, not on centres) — so compare a prediction to THAT baseline, not to zero."""
     u, v = field
     N = u.shape[0]
     h = 1.0 / N
     div = (u[2:, 1:-1] - u[:-2, 1:-1]) / (2 * h) + (v[1:-1, 2:] - v[1:-1, :-2]) / (2 * h)
-    return float(abs(div).max())
+    b = 4                       # skip a wall band: the lid corners are singular (u jumps 0 → 1 in one cell)
+    return float(np.sqrt((div[b:-b, b:-b] ** 2).mean()))
 
 
 def streamfunction_from_centres(field):

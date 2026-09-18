@@ -26,10 +26,10 @@ Solver — all on `main`, reproducible with the commands in `verify/`
 - [x] Centreline profiles match Ghia et al. (1982) at Re = 100, 400, 1000 — **max deviation 0.5% / 0.5% / 1.2% of lid speed**
 - [x] Primary vortex centre matches published location — **exact to the grid at Re = 100 and 1000**
 
-Surrogate
-- [ ] Held-out Re: relative L2 error of the predicted field vs the solver
-- [ ] Predicted field respects ∇·u ≈ 0 (a constraint the model was never told)
-- [ ] Error vs Re, with the training range marked — honest inside, degrading outside
+Surrogate — two models, same evaluation
+- [x] Held-out Re: relative L2 error of the predicted field vs the solver — **POD 2.3e-6 mean · CNN 6.8e-3 mean**
+- [x] Predicted field respects ∇·u ≈ 0 (a constraint the model was never told) — **POD equals the solver's own residual; CNN 4× worse**
+- [x] Error vs Re, with the training range marked — honest inside, degrading outside — **both degrade immediately past the edges**
 
 ## Solver results
 
@@ -57,6 +57,47 @@ Two things the checks turned up that a "looks right" pass would have missed:
 
 ![Re = 400](figures/ghia_Re400_N128.png)
 
+## Surrogate results
+
+**Dataset.** 86 solver runs on 128², Re log-spaced in [50, 1500] (80 values; every 5th — 16 — held out and never
+trained on) plus 6 cases outside the range (30, 40, 1750, 2000, 2250, 2500) to measure how the surrogates degrade
+where they have no right to be good. Every run converged to |∂u/∂t| < 1e-6 with ∇·u ≈ 1e-13 and a flat grid-scale
+oscillation metric (0.040–0.050), i.e. the grid resolved every case. 243 worker-minutes, 68 min wall on four cores.
+
+**Two surrogates, one evaluation.**
+
+- **POD + spline** — proper orthogonal decomposition of the 64 training fields (15–20 modes) and a natural cubic
+  spline through the mode coefficients in log Re. Linear subspace, deterministic, no training loop. ~20 numbers per Re.
+- **CNN decoder** — log Re → dense → 4×4 → five upsampling stages → the (2, 128, 128) field. 500k parameters, MSE,
+  Adam, 4000 full-batch epochs, 6 min on an RTX 2060.
+
+![error vs Re](figures/surrogate_error.png)
+
+| | held-out Re, inside [50, 1500] | outside the range | divergence of the prediction (RMS, solver's own: 8e-3) |
+|---|---|---|---|
+| **POD** | rel-L2 **2.3e-6** mean, 1.5e-5 max | 0.4% at Re 1750 → 3.4% at Re 2500 | 8.4e-3 — identical to the solver |
+| **CNN** | rel-L2 **6.8e-3** mean, 1.2e-2 max | 2.0% at Re 1750 → 4.1% at Re 2500 | 3.1e-2 inside, 7e-2 outside |
+
+![fields at Re = 895](figures/surrogate_fields.png)
+
+What the checks say, in order of importance:
+
+- **The linear model is essentially exact and the neural one is not — by three orders of magnitude.** A steady
+  flow that depends on one parameter traces a smooth curve through field space; 15 POD modes and a spline follow
+  that curve to 2e-6, which is the solver's own convergence floor. The CNN, with 25,000× more parameters, reaches
+  0.7% and *invents structure along the side walls* that the solver does not have (bottom row of the figure). A small
+  error norm can still hide wrong physics — which is why the field comparison sits next to the number.
+- **Incompressibility is a free consequence of POD and a partly-learned one for the CNN.** A linear combination of
+  divergence-free fields is divergence-free, so POD's predictions carry exactly the solver's residual (8.4e-3, the
+  centred-difference baseline). The CNN was never told ∇·u = 0 and only half learned it: 4× the baseline inside the
+  range, 10× outside.
+- **Both degrade the moment they leave the training range**, and the plot says so rather than hiding it. POD goes
+  from 1e-6 to 1e-2 within one step past either edge. A surrogate is an interpolation of a validated solver — not a
+  replacement for physics, and never an extrapolation.
+
+The interactive demo therefore runs on the POD model. The CNN stays in the repo as the comparison that earned that
+decision.
+
 ## Layout
 
 ```
@@ -67,8 +108,14 @@ verify/        the checks above, each a script that prints its numbers
   grid_convergence.py   observed order of accuracy               --re 100 --grids 16 32 64 128
 figures/       the committed figures the README shows
 data/          solver runs used to train the surrogate (generated, not committed)
-surrogate/     model, training, evaluation
-web/           the interactive Re-slider demo (last)
+surrogate/
+  generate.py           the dataset: 86 runs, 4 worker chains with continuation in Re
+  data.py               loader + metrics (relative L2, RMS centred divergence, vortex centre)
+  pod.py                POD + natural cubic spline in log Re          → models/pod.npz
+  cnn.py                the convolutional decoder (torch, GPU)        → models/cnn.pt
+  evaluate.py           held-out / outside-range tables + the two figures above
+  models/               the two fitted surrogates (committed, 7 MB)
+web/           the interactive Re-slider demo (next)
 ```
 
 ## Running
@@ -77,6 +124,12 @@ web/           the interactive Re-slider demo (last)
 py -3.12 -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python solver.py --re 100 --n 64
+.venv\Scripts\python verify\compare_ghia.py --re 1000 --n 128       # ~5 min
+.venv\Scripts\python verify\grid_convergence.py --re 100
+.venv\Scripts\python surrogate\generate.py --workers 4               # ~70 min, writes data/
+.venv\Scripts\python surrogate\pod.py
+.venv\Scripts\python surrogate\cnn.py                                # GPU, ~6 min
+.venv\Scripts\python surrogate\evaluate.py
 ```
 
 ## Reference

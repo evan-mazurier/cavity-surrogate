@@ -6,3 +6,5 @@ data/
 *.pt
 .torch-install.log
 out/
+!surrogate/models/
+!surrogate/models/*
