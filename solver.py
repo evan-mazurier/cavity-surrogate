@@ -29,6 +29,17 @@ import time
 import numpy as np
 
 
+def _interp2(xs, ys, F, xt, yt):
+    """Bilinear interpolation of F (len(xs) x len(ys)) onto the grid xt x yt; clamps at the edges."""
+    tmp = np.empty((len(xt), len(ys)))
+    for j in range(len(ys)):
+        tmp[:, j] = np.interp(xt, xs, F[:, j])
+    out = np.empty((len(xt), len(yt)))
+    for i in range(len(xt)):
+        out[i, :] = np.interp(yt, ys, tmp[i, :])
+    return out
+
+
 class NeumannPoisson:
     """Exact solver for the cell-centred Laplacian with homogeneous Neumann walls on an N×N grid.
 
@@ -127,15 +138,43 @@ class Cavity:
         self.apply_bc()
         self.t += dt
 
+    # ------------------------------------------------------------------ initial state
+    def init_from(self, other: "Cavity"):
+        """Start from another run's fields (any grid). The steady state is unique at these Re,
+        so the initial condition only shortens the transient — it cannot change the answer."""
+        if other.N == self.N:
+            self.u[:] = other.u; self.v[:] = other.v; self.p[:] = other.p
+        else:
+            ho, N = other.h, self.N
+            # u lives at x = i*h, y = (j-0.5)*h (ghost rows at j = 0 and N+1)
+            xo = np.arange(other.N + 1) * ho;  yo = (np.arange(other.N + 2) - 0.5) * ho
+            xt = np.arange(N + 1) * self.h;    yt = (np.arange(N + 2) - 0.5) * self.h
+            self.u[:] = _interp2(xo, yo, other.u, xt, yt)
+            xo = (np.arange(other.N + 2) - 0.5) * ho;  yo = np.arange(other.N + 1) * ho
+            xt = (np.arange(N + 2) - 0.5) * self.h;    yt = np.arange(N + 1) * self.h
+            self.v[:] = _interp2(xo, yo, other.v, xt, yt)
+        self.apply_bc()
+        self.t = 0.0
+
     # ------------------------------------------------------------------ diagnostics
     def divergence_field(self) -> np.ndarray:
         """∇·u on the N×N interior cells."""
         u, v, h = self.u, self.v, self.h
         return (u[1:, 1:-1] - u[:-1, 1:-1]) / h + (v[1:-1, 1:] - v[1:-1, :-1]) / h
 
+    def wiggle(self) -> float:
+        """Largest grid-scale (2h) oscillation in u or v: max |f[i+1] - 2 f[i] + f[i-1]| over the
+        interior away from the walls. Small (< ~0.05 of lid speed) means the grid resolves the flow; a jump with Re
+        means the boundary layers have become thinner than the cells."""
+        b = 4                                     # skip a band along the walls: the lid corners are
+        u, v = self.u[b:-b, b:-b], self.v[b:-b, b:-b]   # genuinely singular (u jumps 0 → 1 in one cell)
+        wu = max(abs(u[2:, :] - 2 * u[1:-1, :] + u[:-2, :]).max(), abs(u[:, 2:] - 2 * u[:, 1:-1] + u[:, :-2]).max())
+        wv = max(abs(v[2:, :] - 2 * v[1:-1, :] + v[:-2, :]).max(), abs(v[:, 2:] - 2 * v[:, 1:-1] + v[:, :-2]).max())
+        return max(wu, wv)
+
     def stable_dt(self, safety: float = 0.5) -> float:
         """Explicit-Euler limits: diffusion h²/4ν, CFL h/U, and central-convection 2ν/U²."""
-        umax = max(abs(self.u).max(), abs(self.v).max(), self.lid)
+        umax = max(abs(self.u[:, 1:-1]).max(), abs(self.v[1:-1, :]).max(), self.lid)
         return safety * min(self.h**2 / (4 * self.nu), self.h / umax, 2 * self.nu / umax**2)
 
     def run(self, tol: float = 1e-6, max_steps: int = 2_000_000, check_every: int = 100,
@@ -148,10 +187,12 @@ class Cavity:
         hist = []
         t0 = time.perf_counter()
         for n in range(1, max_steps + 1):
-            u_prev, v_prev = self.u.copy(), self.v.copy()
+            if n % check_every == 1 or check_every == 1:
+                u_prev, v_prev = self.u.copy(), self.v.copy()
             self.step(dt)
             if n % check_every == 0:
-                res = max(abs(self.u - u_prev).max(), abs(self.v - v_prev).max()) / dt
+                # mean rate of change over the last check_every steps
+                res = max(abs(self.u - u_prev).max(), abs(self.v - v_prev).max()) / (dt * check_every)
                 hist.append((self.t, res))
                 if verbose and n % (check_every * 20) == 0:
                     print(f"  t = {self.t:7.3f}  |du/dt|max = {res:.3e}  ({time.perf_counter() - t0:.1f}s)")
