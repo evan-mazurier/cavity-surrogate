@@ -6,9 +6,9 @@ Table II: v along the horizontal centreline (y = 0.5) at 17 x positions.
 Their grid was 129×129 (Re ≤ 1000) with a multigrid solver; the numbers are the accepted
 benchmark for the lid-driven cavity.
 
-Transcribed from the paper. A transcription slip would show up as a single outlier point
-against an otherwise-matching solver profile — which is exactly what the comparison plot
-is for.
+Transcribed from the paper and cross-checked digit for digit against two independent
+reproductions (gist.github.com/ivan-pi). A slip would show up as a single outlier against an
+otherwise-matching solver profile — and one does: see SUSPECT below.
 """
 import numpy as np
 
@@ -41,6 +41,14 @@ V = {
                     -0.31966, 0.02526, 0.32235, 0.33075, 0.37095, 0.32627, 0.30353, 0.29012,
                     0.27485, 0.00000]),
 }
+
+# Points where the PRINTED table is inconsistent with itself. Kept verbatim above (never
+# "corrected"); the comparison reports the verdict with and without them.
+#   Re = 400, v at x = 0.9063 = -0.23827: non-monotone against its neighbours (-0.22847 at
+#   x = 0.9453, -0.44993 at x = 0.8594) and 15% off a grid-converged solver that matches the
+#   other 16 points to 0.2%. Reproduced identically in every copy of the table found, so it is
+#   in the original paper, not a copying error. The solver's value there is -0.388.
+SUSPECT = {400: {"v": [0.9063]}}
 
 # Primary-vortex centre (x, y) and streamfunction minimum, from the paper's Table IV
 VORTEX = {

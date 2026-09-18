@@ -51,8 +51,16 @@ def compare(cav: Cavity, re: int):
     gx, gy, gpsi = ghia.VORTEX[re]
     print(f"\n  primary vortex: solver ({vx:.4f}, {vy:.4f}) ψ = {psi:.5f}   "
           f"Ghia ({gx:.4f}, {gy:.4f}) ψ = {gpsi:.5f}   (grid h = {cav.h:.4f})")
-    print(f"  VERDICT  max|Δu| = {abs(du).max():.4f}   max|Δv| = {abs(dv).max():.4f}   "
-          f"rms Δu = {np.sqrt((du**2).mean()):.4f}   rms Δv = {np.sqrt((dv**2).mean()):.4f}   (fraction of lid speed)")
+    sus_u = np.isin(ghia.Y, ghia.SUSPECT.get(re, {}).get("u", []))
+    sus_v = np.isin(ghia.X, ghia.SUSPECT.get(re, {}).get("v", []))
+    for k in np.flatnonzero(sus_u | sus_v):
+        print(f"  SUSPECT reference point excluded from the verdict: "
+              f"{'u' if sus_u[k] else 'v'} at {'y' if sus_u[k] else 'x'} = {(ghia.Y if sus_u[k] else ghia.X)[k]:.4f} "
+              f"(printed {(ghia.U if sus_u[k] else ghia.V)[re][k]:+.5f}, solver {(u_at if sus_u[k] else v_at)[k]:+.5f}) — see ghia.SUSPECT")
+    du_ok, dv_ok = du[~sus_u], dv[~sus_v]
+    print(f"  VERDICT  max|Δu| = {abs(du_ok).max():.4f}   max|Δv| = {abs(dv_ok).max():.4f}   "
+          f"rms Δu = {np.sqrt((du_ok**2).mean()):.4f}   rms Δv = {np.sqrt((dv_ok**2).mean()):.4f}   "
+          f"(fraction of lid speed, over {(~sus_u).sum()}+{(~sus_v).sum()} reference points)")
     return (y, u_mid, u_at), (x, v_mid, v_at)
 
 
@@ -86,15 +94,22 @@ def plot(cav: Cavity, re: int, prof_u, prof_v, hist, path: str):
         (ghia.X, ghia.V[re], x, v_mid, "x", "v", "v along y = ½"),
     ]):
         ax.plot(pos, val, color=SOLVER, lw=2, label="this solver", zorder=2)
-        ax.plot(ref_pos if xlabel == "x" else ref_val, ref_val if xlabel == "x" else ref_pos,
-                "o", color=REF, ms=6, mfc="white", mew=1.8, label="Ghia et al. 1982", zorder=3)
+        sus = np.isin(ref_pos, ghia.SUSPECT.get(re, {}).get(ylabel, []))
+        px, py = (ref_pos, ref_val) if xlabel == "x" else (ref_val, ref_pos)
+        ax.plot(px[~sus], py[~sus], "o", color=REF, ms=6, mfc="white", mew=1.8,
+                label="Ghia et al. 1982", zorder=3)
+        if sus.any():
+            ax.plot(px[sus], py[sus], "x", color=MUTED, ms=8, mew=1.6,
+                    label="Ghia point flagged suspect", zorder=3)
         ax.set_xlabel(xlabel, color=INK); ax.set_ylabel(ylabel, color=INK)
         ax.set_title(title, color=INK, fontsize=11, loc="left")
         ax.grid(color=GRID, lw=0.8); ax.set_axisbelow(True)
         for s in ("top", "right"): ax.spines[s].set_visible(False)
         for s in ("left", "bottom"): ax.spines[s].set_color(GRID)
         ax.tick_params(colors=MUTED)
-    axes[1].legend(frameon=False, fontsize=9, loc="lower right")
+    for ax in axes[1:]:
+        if len(ax.get_legend_handles_labels()[0]) > 2 or ax is axes[1]:
+            ax.legend(frameon=False, fontsize=9, loc="lower right" if ax is axes[1] else "lower left")
     axes[1].set_xlim(-0.5, 1.05); axes[1].set_ylim(0, 1)
     axes[2].set_xlim(0, 1)
 
