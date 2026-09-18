@@ -64,6 +64,14 @@
   ul.how .sw { height: 18px; border-radius: 3px; margin-top: 2px; }
   ul.how b { font-weight: 600; }
   p.note { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; }
+  table.vs { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; table-layout: fixed; }
+  table.vs th { text-align: left; font-weight: 600; color: var(--text); padding: 4px 6px 4px 0; border-bottom: 1px solid var(--line-2); font-size: 11.5px; }
+  table.vs th:first-child { width: 42px; }
+  table.vs td { padding: 5px 6px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); line-height: 1.35; }
+  table.vs td:first-child { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding-top: 7px; }
+  table.vs td b { color: var(--text); font-family: var(--mono); font-weight: 500; }
+  .speedup { margin: 10px 0 2px; font-family: var(--mono); font-size: 26px; color: var(--accent); }
+  .speedup small { font-size: 11.5px; color: var(--muted); font-family: system-ui, sans-serif; margin-left: 8px; }
   .trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0 6px; }
   .trio div { text-align: center; font-size: 11px; color: var(--muted); line-height: 1.3; }
   .trio canvas { width: 100%; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 3px; display: block; margin-bottom: 4px; background: #fff; }
@@ -133,20 +141,30 @@
     </div>
     <div class="card">
       <h2>Check against the solver</h2>
-      <p class="note" style="margin-top:0">Nearest Re with a solver run the model <b>never trained on</b>: <b id="c-re" style="color:var(--text)">—</b> <span id="c-split"></span></p>
+      <p class="note" style="margin-top:0">Two routes to the flow at <b id="c-re" style="color:var(--text)">—</b> <span id="c-split"></span>. The model <b>never trained on this Re</b>; the solver's run is the ground truth.</p>
+      <table class="vs">
+        <tr><th></th><th>solver</th><th>surrogate</th></tr>
+        <tr><td>how</td><td>marches the Navier–Stokes equations forward in tiny time steps until the flow stops changing</td><td>blends 20 stored flow patterns with weights read off a curve in Re</td></tr>
+        <tr><td>work</td><td><b id="v-steps">—</b> time steps on a 128×128 grid</td><td><b id="v-ops">—</b> multiply-adds</td></tr>
+        <tr><td>time</td><td><b id="v-solver-t">—</b></td><td><b id="v-pod-t">—</b></td></tr>
+      </table>
+      <div class="speedup"><span id="v-speedup">—</span><small>faster, for the same field</small></div>
       <div class="trio">
-        <div><canvas id="c-solver"></canvas>solver<br>~3 min of compute</div>
-        <div><canvas id="c-pod"></canvas>surrogate<br>~1 ms</div>
+        <div><canvas id="c-solver"></canvas>solver</div>
+        <div><canvas id="c-pod"></canvas>surrogate</div>
         <div><canvas id="c-diff"></canvas>difference<br><span id="c-diffmax">—</span></div>
       </div>
-      <div class="err"><span id="c-err">—</span><small>relative error of the whole field</small></div>
+      <div class="err"><span id="c-err">—</span><small id="c-err-words">relative error of the whole field</small></div>
+      <p class="note" style="margin:2px 0 8px">Relative error = size of (surrogate − solver) over the size of the solver's field, both velocity components, all 16,384 cells. The difference panel is the same quantity point by point, scaled to its own maximum.</p>
+      <h2 style="margin-top:10px">How the check was built</h2>
+      <p class="note" style="margin-top:0">86 solver runs were made. 64 trained the model. <b>16 were held back</b> at Reynolds numbers between the training ones and <b>6 sit outside the range</b> (30, 40, 1750–2500). None of those 22 ever touched the model — they only judge it. The card always shows the one nearest the slider.</p>
       <canvas id="errplot"></canvas>
       <div class="legend"><span><i style="background:var(--accent)"></i>held-out Re, inside the range</span><span><i style="background:#fff;border:1.5px solid var(--accent)"></i>outside the range</span><span><i style="background:var(--accent);opacity:.35;border-radius:0"></i>current Re</span></div>
-      <p class="note">Inside the training range the surrogate matches the solver to about one part in a million — the solver's own convergence floor. Outside it the error climbs at once: the model interpolates a validated solver, it does not contain the physics.</p>
+      <p class="note">Inside the training range the surrogate matches the solver to about one part in a million — the solver's own convergence floor. Outside it the error climbs at once: the model interpolates a validated solver, it does not contain the physics. A surrogate you cannot check this way is a guess.</p>
     </div>
     <div class="card">
       <h2>What the model is</h2>
-      <p class="note" style="margin-top:0">86 runs of a Navier–Stokes solver (validated against Ghia et al. 1982, see the repo) were reduced to 20 spatial patterns (POD modes). Each pattern's weight is a smooth curve in log Re. Every picture here is mean + Σ aₖ(Re) · patternₖ, computed in this page from 2.7 MB of numbers.</p>
+      <p class="note" style="margin-top:0">The 64 training flows were decomposed into their principal spatial patterns (proper orthogonal decomposition): 20 patterns capture them to better than one part in 10⁸. Each pattern's weight is a smooth curve in log Re (a cubic spline through the 64 known values). Every picture here is mean + Σ aₖ(Re) · patternₖ, computed in this page from 2.7 MB of numbers. Why so good? A steady flow that depends on a single parameter traces a smooth curve through the space of all possible fields; 20 directions are enough to follow it. A 500,000-parameter neural network trained on the same runs reaches 0.7% — a thousand times worse — and invents features the solver does not have (see the repo).</p>
     </div>
   </aside>
 </main>
@@ -393,14 +411,29 @@
     checkRe = best.re;
     const truth = await loadRun(best.re);
     if (checkRe !== best.re) return;
-    const pred = new Float32Array(predict(best.re));
+    // time the surrogate honestly: median of 20 evaluations at this Re, on this machine
+    const times = []; let pred;
+    for (let r = 0; r < 20; r++) { const t0 = performance.now(); pred = predict(best.re); times.push(performance.now() - t0); }
+    pred = new Float32Array(pred); times.sort((a, b) => a - b); const podMs = times[10];
     for (const [id, f] of [['c-solver', truth], ['c-pod', pred]]) { const cv = $(id); cv.width = cv.height = 256; drawField(cv, f, { small: true }); }
     const cd = $('c-diff'); cd.width = cd.height = 256; const mx = drawDiff(cd, pred, truth);
     $('c-diffmax').textContent = `largest: ${mx.toExponential(1)} × lid speed`;
-    $('c-re').textContent = best.re;
+    $('c-re').textContent = 'Re ' + best.re;
     $('c-split').textContent = best.split === 'holdout' ? '(inside the training range, held out)' : '(outside the training range)';
-    $('c-err').textContent = relL2(pred, truth).toExponential(2);
+    const err = relL2(pred, truth);
+    $('c-err').textContent = err.toExponential(2);
     $('c-err').style.color = best.split === 'holdout' ? 'var(--text)' : 'var(--warn)';
+    $('c-err-words').textContent = err >= 1e-2 ? `relative error — about ${(100 * err).toFixed(1)}% of the field`
+      : err >= 1e-3 ? `relative error — about ${(100 * err).toFixed(2)}% of the field`
+      : `relative error — about one part in ${Number((1 / err).toPrecision(1)).toLocaleString('en')}`;
+    // the two routes' costs
+    const fmtT = s => s >= 60 ? `${Math.floor(s / 60)} min ${Math.round(s % 60)} s` : `${s.toFixed(1)} s`;
+    $('v-steps').textContent = best.steps.toLocaleString('en');
+    $('v-ops').textContent = (k * F).toLocaleString('en');
+    $('v-solver-t').textContent = fmtT(best.wall) + ' on one CPU core, and that is with a head start from the neighbouring Re';
+    $('v-pod-t').textContent = podMs.toFixed(2) + ' ms (this page)';
+    const speedup = best.wall * 1000 / podMs;
+    $('v-speedup').textContent = Number(speedup.toPrecision(2)).toLocaleString('en') + '×';
   }
 
   // ------------------------------------------------------------ slider + main loop

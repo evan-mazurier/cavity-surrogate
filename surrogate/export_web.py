@@ -33,10 +33,11 @@ def main():
     runs = []
     for split in ("holdout", "extrap"):
         for re in man[split]:
-            f, _ = data.load(re)
+            f, d = data.load(re)
             f.astype("<f4").tofile(os.path.join(OUT, "runs", f"Re{int(re)}.bin"))
             err = data.rel_l2(m.predict([re])[0], f)
-            runs.append(dict(re=int(re), split=split, err=err))
+            runs.append(dict(re=int(re), split=split, err=err, steps=int(d["steps"]), wall=float(d["wall"]),
+                             t_end=float(d["t_end"]), dt=float(d["dt"])))
     runs.sort(key=lambda r: r["re"])
 
     lo, hi = np.log10(50), np.log10(1500)
@@ -44,7 +45,7 @@ def main():
         k=int(m.modes.shape[0]), N=int(m.shape[1]),
         feature=dict(centre=(lo + hi) / 2, half=(hi - lo) / 2),
         train_range=[min(man["train"]), max(man["train"])],
-        n_train=len(man["train"]),
+        n_train=len(man["train"]), n_runs=len(man["train"]) + len(man["holdout"]) + len(man["extrap"]),
         spline=dict(x=m.spline.x.tolist(), y=m.spline.y.tolist(), M=m.spline.M.tolist()),
         runs=runs,
     )
