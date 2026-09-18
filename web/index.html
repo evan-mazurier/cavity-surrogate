@@ -6,73 +6,82 @@
 <title>Cavity Surrogate</title>
 <style>
   :root {
-    --bg: #000; --panel: #0b0b10; --line: #1c1c26; --line-2: #2a2a38;
-    --text: #e6e6ea; --muted: #8a8a96; --dim: #55555f;
-    --accent: #8b5cf6; --pod: #6b84f5; --cnn: #d06a22; --warn: #e0b23a;
+    --bg: #ffffff; --panel: #f6f7f9; --line: #e5e7eb; --line-2: #d1d5db;
+    --text: #1f2933; --muted: #6b7280; --dim: #9aa1ab;
+    --accent: #3b5bdb; --accent-soft: rgba(59, 91, 219, .12); --warn: #b45309; --warn-soft: rgba(217, 119, 6, .12);
     --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
-    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   body { display: flex; flex-direction: column; }
-  header { padding: 14px 20px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-  header b { font-weight: 600; letter-spacing: .02em; font-size: 15px; }
-  header span { color: var(--muted); font-size: 12.5px; }
+  header { padding: 14px 22px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header b { font-weight: 650; font-size: 16px; }
+  header span { color: var(--muted); font-size: 13px; }
   header a { color: var(--muted); margin-left: auto; font-size: 12px; text-decoration: none; border-bottom: 1px solid var(--line-2); }
-  main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 380px; min-height: 0; }
-  #stage { display: flex; flex-direction: column; padding: 18px 20px; gap: 12px; min-width: 0; }
-  #field-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  #field { background: #000; border: 1px solid var(--line); border-radius: 4px; max-width: 100%; max-height: 100%; }
+  main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 400px; min-height: 0; }
+  #stage { display: flex; flex-direction: column; padding: 16px 22px 14px; gap: 10px; min-width: 0; }
+  #field-row { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+  #field { display: block; }
+  #cbar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  #cbar { width: 16px; border-radius: 3px; border: 1px solid var(--line-2); }
+  #cbar-wrap .t { font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 
-  #slider-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 18px; }
+  #slider-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 18px; margin-top: 4px; }
   #re-big { font-family: var(--mono); font-size: 26px; min-width: 150px; }
   #re-big small { font-size: 12px; color: var(--muted); font-family: system-ui, sans-serif; display: block; }
   #track { position: relative; height: 34px; }
   #track .rail { position: absolute; left: 0; right: 0; top: 15px; height: 4px; background: var(--line-2); border-radius: 2px; }
-  #track .train { position: absolute; top: 13px; height: 8px; background: rgba(139, 92, 246, .35); border-radius: 3px; }
+  #track .train { position: absolute; top: 12px; height: 10px; background: var(--accent-soft); border: 1px solid rgba(59,91,219,.35); border-radius: 4px; }
   #track .lbl { position: absolute; top: 24px; font-size: 10.5px; color: var(--dim); transform: translateX(-50%); font-family: var(--mono); }
   #track input { position: absolute; left: 0; right: 0; top: 0; width: 100%; height: 34px; margin: 0; -webkit-appearance: none; appearance: none; background: transparent; }
   #track input::-webkit-slider-runnable-track { height: 34px; background: transparent; }
-  #track input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: 9px; border-radius: 50%;
-    background: var(--accent); border: 2px solid #000; box-shadow: 0 0 0 1.5px var(--accent); cursor: pointer; }
+  #track input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: 8px; border-radius: 50%;
+    background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--accent); cursor: pointer; }
   #track input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 0; cursor: pointer; }
-  #status { font-size: 12.5px; color: var(--muted); }
-  #status.out { color: var(--warn); }
-  #status::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 0; }
-  #status.out::before { background: var(--warn); }
+  #status { font-size: 13px; color: var(--text); padding: 6px 10px; border-radius: 6px; background: var(--accent-soft); display: inline-block; }
+  #status.out { background: var(--warn-soft); color: var(--warn); }
   .keys { color: var(--dim); font-size: 11.5px; }
   .keys kbd { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
 
   aside { border-left: 1px solid var(--line); background: var(--panel); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-  h2 { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  h2 { font-size: 11px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
   table.read { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.read td { padding: 4px 0; border-bottom: 1px solid var(--line); }
   table.read td:first-child { color: var(--muted); }
   table.read td:last-child { text-align: right; font-family: var(--mono); }
-  .check { border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
-  .check .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 6px; }
-  .check .pair div { text-align: center; font-size: 11px; color: var(--muted); }
-  .check canvas { width: 100%; aspect-ratio: 1; background: #000; border: 1px solid var(--line); border-radius: 3px; display: block; margin-bottom: 4px; }
-  .err { font-family: var(--mono); font-size: 20px; margin: 6px 0 2px; }
+  ul.how { margin: 0; padding: 0; list-style: none; font-size: 12.5px; }
+  ul.how li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 5px 0; border-bottom: 1px solid var(--line); }
+  ul.how li:last-child { border-bottom: 0; }
+  ul.how .sw { height: 18px; border-radius: 3px; margin-top: 2px; }
+  ul.how b { font-weight: 600; }
+  p.note { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; }
+  .trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0 6px; }
+  .trio div { text-align: center; font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .trio canvas { width: 100%; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 3px; display: block; margin-bottom: 4px; background: #fff; }
+  .err { font-family: var(--mono); font-size: 22px; margin: 6px 0 2px; }
   .err small { font-size: 11px; color: var(--muted); font-family: system-ui, sans-serif; margin-left: 6px; }
   #errplot { width: 100%; height: 150px; display: block; }
-  p.note { color: var(--muted); font-size: 12px; margin: 6px 0 0; line-height: 1.5; }
-  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
-  #loading { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; z-index: 9; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { border-left: 0; border-top: 1px solid var(--line); } }
+  #loading { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; z-index: 9; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } aside { border-left: 0; border-top: 1px solid var(--line); } }
 </style>
 </head>
 <body>
 <div id="loading">loading the surrogate (2.7 MB) …</div>
 <header>
   <b>Lid-driven cavity — POD surrogate</b>
-  <span>20 numbers per Reynolds number reproduce a validated Navier–Stokes solution in under a millisecond. The check on the right says how well.</span>
+  <span>A box of fluid stirred by its sliding top wall. The model predicts the whole flow for any Reynolds number in a millisecond; the card on the right measures how right it is.</span>
   <a href="https://github.com/evan-mazurier/cavity-surrogate" target="_blank" rel="noopener">github.com/evan-mazurier/cavity-surrogate</a>
 </header>
 <main>
   <section id="stage">
-    <div id="field-wrap"><canvas id="field"></canvas></div>
+    <div id="field-row">
+      <canvas id="field"></canvas>
+      <div id="cbar-wrap"><span class="t">1.0</span><canvas id="cbar"></canvas><span class="t">0</span><span>speed<br>(lid = 1)</span></div>
+    </div>
     <div id="slider-row">
       <div id="re-big">Re <span id="re-val">—</span><small>Reynolds number</small></div>
       <div id="track">
@@ -81,35 +90,47 @@
         <input id="re" type="range" min="0" max="1000" step="1" value="500" autocomplete="off" aria-label="Reynolds number">
       </div>
     </div>
-    <div id="status"></div>
-    <div class="keys">drag the slider · <kbd>←</kbd> <kbd>→</kbd> fine steps · shaded = the 64 training runs, Re 50 – 1500 · speed magnitude in colour, streamfunction as lines</div>
+    <div><span id="status"></span></div>
+    <div class="keys">drag the slider · <kbd>←</kbd> <kbd>→</kbd> fine steps · the blue band on the track is the range the model was trained on (Re 50 – 1500)</div>
   </section>
   <aside>
-    <div>
+    <div class="card">
+      <h2>How to read the picture</h2>
+      <ul class="how">
+        <li><div class="sw" style="background:#374151"></div><div><b>The box.</b> A square cavity full of fluid, seen from the side. Three walls are fixed; the <b>top wall (the lid) slides to the right</b> at speed 1 and drags the fluid with it.</div></li>
+        <li><div class="sw" id="sw-cmap"></div><div><b>Colour = speed.</b> Dark blue is fluid nearly at rest, yellow is moving as fast as the lid. Fastest just under the lid, slowest in the eye of the vortex and in the corners.</div></li>
+        <li><div class="sw" style="background:#fff;border:1px solid #d1d5db;position:relative"><svg width="24" height="16" style="position:absolute;left:0;top:0"><path d="M3 8 L19 8 M15 4 L19 8 L15 12" stroke="#111" stroke-width="1.6" fill="none"/></svg></div><div><b>Arrows = direction.</b> The lid pushes fluid right, it turns down the right wall, back along the bottom, up the left: one big clockwise whirlpool.</div></li>
+        <li><div class="sw" style="background:#fff;border:1px solid #d1d5db;position:relative"><svg width="24" height="16" style="position:absolute;left:0;top:0"><ellipse cx="12" cy="8" rx="9" ry="5" stroke="#fff" stroke-width="3" fill="none"/><ellipse cx="12" cy="8" rx="9" ry="5" stroke="#111" stroke-width="1" fill="none"/></svg></div><div><b>White lines = streamlines</b>, the paths fluid particles follow. Closed loops = recirculation. The <b>+</b> marks the eye of the main vortex.</div></li>
+        <li><div class="sw" style="background:#fff;border:1px solid #d1d5db;position:relative"><svg width="24" height="16" style="position:absolute;left:0;top:0"><ellipse cx="12" cy="8" rx="8" ry="4.5" stroke="#e8590c" stroke-width="1.6" fill="none"/></svg></div><div><b>Orange loops = corner eddies</b>, small whirlpools in the bottom corners spinning the <i>opposite</i> way. They grow with Re; above Re ≈ 2000 a third one appears at the top left.</div></li>
+      </ul>
+      <p class="note">Re (Reynolds number) is the only knob: momentum versus viscosity. Low Re = honey, one lazy vortex sitting high. High Re = water, a stronger vortex that moves to the centre and bigger corner eddies.</p>
+    </div>
+    <div class="card">
       <h2>Prediction</h2>
       <table class="read">
         <tr><td>model</td><td id="r-model">POD, k modes</td></tr>
         <tr><td>evaluation time</td><td id="r-ms">—</td></tr>
-        <tr><td>primary vortex centre</td><td id="r-vc">—</td></tr>
-        <tr><td>max speed in the field</td><td id="r-umax">—</td></tr>
-        <tr><td>position vs training range</td><td id="r-pos">—</td></tr>
+        <tr><td>eye of the main vortex (x, y)</td><td id="r-vc">—</td></tr>
+        <tr><td>fastest fluid in the field</td><td id="r-umax">—</td></tr>
+        <tr><td>versus the training range</td><td id="r-pos">—</td></tr>
       </table>
     </div>
-    <div class="check">
+    <div class="card">
       <h2>Check against the solver</h2>
-      <p class="note" style="margin-top:0">Nearest Re with a solver run the model never trained on: <b id="c-re" style="color:var(--text)">—</b> <span id="c-split"></span></p>
-      <div class="pair">
-        <div><canvas id="c-solver"></canvas>solver, ~3 min</div>
-        <div><canvas id="c-pod"></canvas>surrogate, &lt; 1 ms</div>
+      <p class="note" style="margin-top:0">Nearest Re with a solver run the model <b>never trained on</b>: <b id="c-re" style="color:var(--text)">—</b> <span id="c-split"></span></p>
+      <div class="trio">
+        <div><canvas id="c-solver"></canvas>solver<br>~3 min of compute</div>
+        <div><canvas id="c-pod"></canvas>surrogate<br>~1 ms</div>
+        <div><canvas id="c-diff"></canvas>difference<br><span id="c-diffmax">—</span></div>
       </div>
-      <div class="err"><span id="c-err">—</span><small>relative L2 error of (u, v)</small></div>
+      <div class="err"><span id="c-err">—</span><small>relative error of the whole field</small></div>
       <canvas id="errplot"></canvas>
-      <div class="legend"><span><i style="background:var(--pod)"></i>held-out, inside the range</span><span><i style="background:transparent;border:1.5px solid var(--pod)"></i>outside</span><span><i style="background:var(--accent);opacity:.5;border-radius:0"></i>current Re</span></div>
-      <p class="note">Inside the training range the surrogate matches the solver to about 1e-6 — the solver's own convergence floor. Outside it the error climbs immediately: the model interpolates a validated solver, it does not contain the physics.</p>
+      <div class="legend"><span><i style="background:var(--accent)"></i>held-out Re, inside the range</span><span><i style="background:#fff;border:1.5px solid var(--accent)"></i>outside the range</span><span><i style="background:var(--accent);opacity:.35;border-radius:0"></i>current Re</span></div>
+      <p class="note">Inside the training range the surrogate matches the solver to about one part in a million — the solver's own convergence floor. Outside it the error climbs at once: the model interpolates a validated solver, it does not contain the physics.</p>
     </div>
-    <div>
-      <h2>What this is</h2>
-      <p class="note" style="margin-top:0">Square box of fluid, top wall sliding to the right. 86 runs of a projection-method solver (validated against Ghia et al. 1982, see the repo) were reduced to 20 spatial modes; each mode's weight is a cubic spline in log Re. Every field here is mean + Σ aₖ(Re) φₖ, computed in this page.</p>
+    <div class="card">
+      <h2>What the model is</h2>
+      <p class="note" style="margin-top:0">86 runs of a Navier–Stokes solver (validated against Ghia et al. 1982, see the repo) were reduced to 20 spatial patterns (POD modes). Each pattern's weight is a smooth curve in log Re. Every picture here is mean + Σ aₖ(Re) · patternₖ, computed in this page from 2.7 MB of numbers.</p>
     </div>
   </aside>
 </main>
@@ -155,7 +176,7 @@
   }
 
   // ------------------------------------------------------------ field analysis
-  // layout of a field: u[i*N + j] then v[i*N + j], i = x index, j = y index (numpy order from the solver)
+  // field layout: u[i*N + j] then v[i*N + j]; i = x index (left → right), j = y index (bottom → top)
   const psi = new Float32Array(N * N);
   function streamfunction(f) {
     const h = 1 / N;
@@ -168,40 +189,32 @@
   }
   function relL2(a, b) { let n = 0, d = 0; for (let i = 0; i < F; i++) { n += (a[i] - b[i]) ** 2; d += b[i] ** 2; } return Math.sqrt(n / d); }
 
-  // ------------------------------------------------------------ drawing
-  const LEVELS = [-0.117, -0.113, -0.108, -0.1, -0.09, -0.07, -0.05, -0.03, -0.015, -0.005, -1e-3, -1e-4, -1e-5, 1e-6, 1e-5, 1e-4, 5e-4, 1e-3, 2e-3];
-  function ramp(t) {   // sequential, one hue (violet), dark → light
-    t = Math.min(1, Math.max(0, t)) ** 0.7;
-    return [Math.round(12 + 150 * t), Math.round(6 + 100 * t), Math.round(30 + 220 * t)];
+  // ------------------------------------------------------------ colour: viridis (perceptually uniform, colour-blind safe)
+  const VIRIDIS = [[68,1,84],[72,26,108],[71,47,125],[65,68,135],[57,86,140],[48,104,142],[41,121,142],[34,138,141],[30,155,138],[38,171,130],[63,188,115],[100,203,93],[144,215,67],[192,223,42],[238,229,27],[253,231,37]];
+  function viridis(t) {
+    t = Math.min(1, Math.max(0, t)) * (VIRIDIS.length - 1); const i = Math.floor(t), f = t - i, a = VIRIDIS[i], b = VIRIDIS[Math.min(i + 1, VIRIDIS.length - 1)];
+    return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])];
   }
-  function draw(cv, f, opts = {}) {
-    const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
-    const img = ctx.createImageData(N, N), px = img.data;
-    let umax = 0; for (let i = 0; i < N * N; i++) { const s = Math.hypot(f[i], f[N * N + i]); if (s > umax) umax = s; }
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-      const s = Math.hypot(f[i * N + j], f[N * N + i * N + j]) / 1.0;   // lid speed = 1
-      const [r, g, b] = ramp(s); const o = ((N - 1 - j) * N + i) * 4;
-      px[o] = r; px[o + 1] = g; px[o + 2] = b; px[o + 3] = 255;
-    }
-    const off = draw.off || (draw.off = document.createElement('canvas')); off.width = N; off.height = N;
-    off.getContext('2d').putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.clearRect(0, 0, W, H); ctx.drawImage(off, 0, 0, W, H);
-    // streamfunction contours by marching squares on cell centres
-    const ps = streamfunction(f), sc = W / N;
-    ctx.lineWidth = opts.thin ? 0.8 : 1.1; ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.beginPath();
-    for (const L of LEVELS) for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
+  const BLUES = t => { t = Math.min(1, Math.max(0, t)); return [247 - 239 * t, 251 - 170 * t, 255 - 110 * t]; };
+  (() => {  // colour bar + swatch
+    const cb = $('cbar'); cb.width = 16; cb.height = 256; const c = cb.getContext('2d');
+    for (let y = 0; y < 256; y++) { const [r, g, b] = viridis(1 - y / 255); c.fillStyle = `rgb(${r},${g},${b})`; c.fillRect(0, y, 16, 1); }
+    $('sw-cmap').style.background = 'linear-gradient(90deg, rgb(68,1,84), rgb(41,121,142), rgb(100,203,93), rgb(253,231,37))';
+  })();
+
+  // ------------------------------------------------------------ drawing
+  const LV_MAIN = [-0.117, -0.113, -0.108, -0.1, -0.09, -0.075, -0.06, -0.045, -0.03, -0.018, -0.009, -0.003, -0.0005];
+  const LV_EDDY = [1e-6, 1e-5, 5e-5, 1.5e-4, 4e-4, 8e-4, 1.5e-3, 2.5e-3];
+  function contours(ctx, ps, W, H, levels, style, width) {
+    const sc = W / N;
+    ctx.lineWidth = width; ctx.strokeStyle = style; ctx.beginPath();
+    for (const L of levels) for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
       const a = ps[i * N + j], b = ps[(i + 1) * N + j], c = ps[(i + 1) * N + j + 1], d = ps[i * N + j + 1];
       const code = (a > L) | (b > L) << 1 | (c > L) << 2 | (d > L) << 3;
       if (code === 0 || code === 15) continue;
-      const x0 = (i + 0.5) * sc, y0 = H - (j + 0.5) * sc;   // canvas y is down
+      const x0 = (i + 0.5) * sc, y0 = H - (j + 0.5) * sc;
       const t = (p, q) => (L - p) / (q - p);
-      const eb = [x0 + t(a, b) * sc, y0];               // bottom edge  a→b
-      const er = [x0 + sc, y0 - t(b, c) * sc];          // right edge   b→c
-      const et = [x0 + t(d, c) * sc, y0 - sc];          // top edge     d→c
-      const el = [x0, y0 - t(a, d) * sc];               // left edge    a→d
+      const eb = [x0 + t(a, b) * sc, y0], er = [x0 + sc, y0 - t(b, c) * sc], et = [x0 + t(d, c) * sc, y0 - sc], el = [x0, y0 - t(a, d) * sc];
       const seg = (p, q) => { ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); };
       switch (code) {
         case 1: case 14: seg(el, eb); break;   case 2: case 13: seg(eb, er); break;
@@ -211,13 +224,76 @@
       }
     }
     ctx.stroke();
-    if (!opts.thin) {
-      const [vx, vy] = vortexCentre(ps);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.beginPath();
-      ctx.moveTo(vx * W - 6, H - vy * H); ctx.lineTo(vx * W + 6, H - vy * H); ctx.moveTo(vx * W, H - vy * H - 6); ctx.lineTo(vx * W, H - vy * H + 6); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '11px system-ui'; ctx.fillText('lid  →', 10, 16);
+  }
+  function arrows(ctx, f, W, H, n) {
+    const step = N / n, sc = W / N;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+      const i = Math.round((a + 0.5) * step), j = Math.round((b + 0.5) * step);
+      const u = f[i * N + j], v = f[N * N + i * N + j], s = Math.hypot(u, v);
+      if (s < 0.01) continue;
+      const len = Math.min(1, 0.25 + s) * 0.75 * step * sc;
+      const x = (i + 0.5) * sc, y = H - (j + 0.5) * sc, dx = u / s * len, dy = -v / s * len;
+      const x1 = x - dx / 2, y1 = y - dy / 2, x2 = x + dx / 2, y2 = y + dy / 2, ang = Math.atan2(dy, dx), hw = Math.min(6, len * 0.35);
+      for (const [style, w] of [['rgba(0,0,0,.55)', 3.2], ['#fff', 1.4]]) {
+        ctx.strokeStyle = style; ctx.lineWidth = w; ctx.beginPath();
+        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+        ctx.moveTo(x2 - hw * Math.cos(ang - 0.5), y2 - hw * Math.sin(ang - 0.5)); ctx.lineTo(x2, y2); ctx.lineTo(x2 - hw * Math.cos(ang + 0.5), y2 - hw * Math.sin(ang + 0.5));
+        ctx.stroke();
+      }
     }
-    return { umax, vc: vortexCentre(ps) };
+  }
+  const off = document.createElement('canvas'); off.width = N; off.height = N;
+  function paintScalar(ctx, W, H, scalarAt, cmap) {
+    const img = off.getContext('2d').createImageData(N, N), px = img.data;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const [r, g, b] = cmap(scalarAt(i, j)); const o = ((N - 1 - j) * N + i) * 4;
+      px[o] = r; px[o + 1] = g; px[o + 2] = b; px[o + 3] = 255;
+    }
+    off.getContext('2d').putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, W, H); ctx.drawImage(off, 0, 0, W, H);
+  }
+  function drawField(cv, f, opts = {}) {
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, big = !opts.small;
+    let umax = 0; for (let i = 0; i < N * N; i++) { const s = Math.hypot(f[i], f[N * N + i]); if (s > umax) umax = s; }
+    paintScalar(ctx, W, H, (i, j) => Math.hypot(f[i * N + j], f[N * N + i * N + j]), viridis);
+    const ps = streamfunction(f);
+    contours(ctx, ps, W, H, LV_MAIN, big ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.8)', big ? 1.2 : 0.8);
+    contours(ctx, ps, W, H, LV_EDDY, '#ff8a3d', big ? 1.4 : 0.9);
+    if (big) arrows(ctx, f, W, H, 14);
+    const [vx, vy] = vortexCentre(ps);
+    const s = big ? 1 : 0.5;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3 * s; ctx.beginPath();
+    ctx.moveTo(vx * W - 8 * s, H - vy * H); ctx.lineTo(vx * W + 8 * s, H - vy * H); ctx.moveTo(vx * W, H - vy * H - 8 * s); ctx.lineTo(vx * W, H - vy * H + 8 * s); ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4 * s; ctx.stroke();
+    if (big) {
+      // walls and the lid
+      ctx.strokeStyle = '#374151'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, H); ctx.lineTo(W, H); ctx.lineTo(W, 0); ctx.stroke();
+      ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, W, 9);
+      ctx.font = `600 ${Math.round(W / 42)}px system-ui`; ctx.textAlign = 'center';
+      const lbl = 'lid slides this way at speed 1  →';
+      const tw = ctx.measureText(lbl).width + 16, th = W / 42 + 10;
+      ctx.fillStyle = 'rgba(17,24,39,.85)'; ctx.fillRect(W / 2 - tw / 2, 12, tw, th);
+      ctx.fillStyle = '#fff'; ctx.fillText(lbl, W / 2, 12 + th - 7);
+      // labels
+      const label = (text, x, y, align = 'left') => {
+        ctx.font = `${Math.round(W / 48)}px system-ui`; ctx.textAlign = align;
+        const w = ctx.measureText(text).width + 12, h = W / 48 + 8, x0 = align === 'left' ? x - 6 : align === 'right' ? x - w + 6 : x - w / 2;
+        ctx.fillStyle = 'rgba(255,255,255,.88)'; ctx.fillRect(x0, y - h + 5, w, h);
+        ctx.fillStyle = '#111827'; ctx.fillText(text, x, y);
+      };
+      label('eye of the main vortex', vx * W + 14, H - vy * H + 5);
+      label('corner eddy (spins the other way)', W - 12, H - 14, 'right');
+      label('corner eddy', 14, H - 14, 'left');
+    }
+    return { umax, vc: [vx, vy] };
+  }
+  function drawDiff(cv, a, b) {
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+    let mx = 0; for (let i = 0; i < N * N; i++) { const e = Math.hypot(a[i] - b[i], a[N * N + i] - b[N * N + i]); if (e > mx) mx = e; }
+    paintScalar(ctx, W, H, (i, j) => Math.hypot(a[i * N + j] - b[i * N + j], a[N * N + i * N + j] - b[N * N + i * N + j]) / (mx || 1), BLUES);
+    return mx;
   }
 
   // ------------------------------------------------------------ error plot
@@ -226,21 +302,21 @@
     const cv = $('errplot'), dpr = devicePixelRatio || 1;
     cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr;
     const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-    const W = cv.clientWidth, H = cv.clientHeight, ml = 34, mr = 14, mt = 8, mb = 18;
+    const W = cv.clientWidth, H = cv.clientHeight, ml = 36, mr = 14, mt = 8, mb = 18;
     const X = r => ml + (Math.log10(r) - Math.log10(RE_MIN)) / (Math.log10(RE_MAX) - Math.log10(RE_MIN)) * (W - ml - mr);
     const Y = e => mt + (Math.log10(1e-1) - Math.log10(e)) / (Math.log10(1e-1) - Math.log10(1e-7)) * (H - mt - mb);
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(139,92,246,.14)'; ctx.fillRect(X(lo), mt, X(hi) - X(lo), H - mt - mb);
-    ctx.strokeStyle = '#1c1c26'; ctx.lineWidth = 1; ctx.fillStyle = '#55555f'; ctx.font = '9.5px ui-monospace, monospace'; ctx.textAlign = 'right';
-    for (const e of [1e-6, 1e-4, 1e-2]) { ctx.beginPath(); ctx.moveTo(ml, Y(e)); ctx.lineTo(W - mr, Y(e)); ctx.stroke(); ctx.fillText(e.toExponential(0).replace('e-', 'e-'), ml - 4, Y(e) + 3); }
+    ctx.fillStyle = 'rgba(59,91,219,.10)'; ctx.fillRect(X(lo), mt, X(hi) - X(lo), H - mt - mb);
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1; ctx.fillStyle = '#9aa1ab'; ctx.font = '9.5px ui-monospace, monospace'; ctx.textAlign = 'right';
+    for (const e of [1e-6, 1e-4, 1e-2]) { ctx.beginPath(); ctx.moveTo(ml, Y(e)); ctx.lineTo(W - mr, Y(e)); ctx.stroke(); ctx.fillText(e.toExponential(0), ml - 4, Y(e) + 3); }
     ctx.textAlign = 'center';
-    for (const r of [30, 100, 300, 1000, 3000]) { ctx.fillText(r, X(r), H - 5); }
-    ctx.strokeStyle = 'rgba(139,92,246,.7)'; ctx.beginPath(); ctx.moveTo(X(re), mt); ctx.lineTo(X(re), H - mb); ctx.stroke();
-    ctx.strokeStyle = 'rgba(107,132,245,.45)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (const r of [30, 100, 300, 1000, 3000]) ctx.fillText(r, X(r), H - 5);
+    ctx.strokeStyle = 'rgba(59,91,219,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(re), mt); ctx.lineTo(X(re), H - mb); ctx.stroke();
+    ctx.strokeStyle = 'rgba(59,91,219,.45)'; ctx.lineWidth = 1; ctx.beginPath();
     runs.forEach((r, i) => { i ? ctx.lineTo(X(r.re), Y(r.err)) : ctx.moveTo(X(r.re), Y(r.err)); }); ctx.stroke();
     for (const r of runs) {
-      ctx.beginPath(); ctx.arc(X(r.re), Y(r.err), 3.2, 0, 2 * Math.PI);
-      if (r.split === 'holdout') { ctx.fillStyle = '#6b84f5'; ctx.fill(); } else { ctx.strokeStyle = '#6b84f5'; ctx.lineWidth = 1.5; ctx.fillStyle = '#0b0b10'; ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(X(r.re), Y(r.err), 3.4, 0, 2 * Math.PI);
+      if (r.split === 'holdout') { ctx.fillStyle = '#3b5bdb'; ctx.fill(); } else { ctx.strokeStyle = '#3b5bdb'; ctx.lineWidth = 1.5; ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke(); }
     }
   }
 
@@ -258,7 +334,9 @@
     const truth = await loadRun(best.re);
     if (checkRe !== best.re) return;
     const pred = new Float32Array(predict(best.re));
-    for (const [id, f] of [['c-solver', truth], ['c-pod', pred]]) { const cv = $(id); cv.width = cv.height = 256; draw(cv, f, { thin: true }); }
+    for (const [id, f] of [['c-solver', truth], ['c-pod', pred]]) { const cv = $(id); cv.width = cv.height = 256; drawField(cv, f, { small: true }); }
+    const cd = $('c-diff'); cd.width = cd.height = 256; const mx = drawDiff(cd, pred, truth);
+    $('c-diffmax').textContent = `largest: ${mx.toExponential(1)} × lid speed`;
     $('c-re').textContent = best.re;
     $('c-split').textContent = best.split === 'holdout' ? '(inside the training range, held out)' : '(outside the training range)';
     $('c-err').textContent = relL2(pred, truth).toExponential(2);
@@ -275,20 +353,21 @@
 
   const cv = $('field');
   function sizeField() {
-    const wrap = $('field-wrap'), s = Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight)), dpr = devicePixelRatio || 1;
+    const row = $('field-row'), s = Math.floor(Math.min(row.clientWidth - 70, row.clientHeight)), dpr = devicePixelRatio || 1;
     cv.style.width = cv.style.height = s + 'px'; cv.width = cv.height = Math.round(s * dpr);
+    $('cbar').style.height = Math.round(s * 0.6) + 'px';
   }
   function update() {
     const re = sliderToRe(+slider.value);
     const t0 = performance.now(); const f = predict(re); const ms = performance.now() - t0;
-    const { umax, vc } = draw(cv, f);
+    const { umax, vc } = drawField(cv, f);
     $('re-val').textContent = re < 100 ? re.toFixed(1) : Math.round(re);
     $('r-ms').textContent = ms.toFixed(2) + ' ms';
     $('r-vc').textContent = `(${vc[0].toFixed(3)}, ${vc[1].toFixed(3)})`;
     $('r-umax').textContent = umax.toFixed(3) + ' × lid speed';
     const inside = re >= lo && re <= hi;
     $('r-pos').textContent = inside ? 'inside' : (re < lo ? `${(100 * (1 - re / lo)).toFixed(0)}% below` : `${(100 * (re / hi - 1)).toFixed(0)}% above`);
-    $('status').textContent = inside ? 'inside the training range — trust the number on the right' : 'outside the training range — extrapolating';
+    $('status').textContent = inside ? 'Inside the training range — the error on the right is what to expect here.' : 'Outside the training range — the model is extrapolating; watch the error climb.';
     $('status').className = inside ? '' : 'out';
     drawErrPlot(re);
     updateCheck(re);
