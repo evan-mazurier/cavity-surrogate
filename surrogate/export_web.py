@@ -1,10 +1,10 @@
 """
-Export the POD surrogate and the verification runs for the browser demo (web/).
+Export the POD surrogate and the verification runs for the browser demo (docs/, served by GitHub Pages).
 
-  web/model/pod.bin        float32 LE: mean (2·N²) then k modes (k · 2·N²)
-  web/model/meta.json      k, N, the spline (x, y, M), the feature scaling, the training range,
+  docs/model/pod.bin        float32 LE: mean (2·N²) then k modes (k · 2·N²)
+  docs/model/meta.json      k, N, the spline (x, y, M), the feature scaling, the training range,
                            and the list of exported solver runs with the POD error at each
-  web/model/runs/Re<re>.bin   float32 LE (u, v) at the cell centres for each held-out / outside run
+  docs/model/runs/Re<re>.bin   float32 LE (u, v) at the cell centres for each held-out / outside run
 
     .venv\\Scripts\\python surrogate\\export_web.py
 """
@@ -19,7 +19,7 @@ import data                       # noqa: E402
 from pod import POD               # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-OUT = os.path.join(ROOT, "web", "model")
+OUT = os.path.join(ROOT, "docs", "model")
 
 
 def main():
