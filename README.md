@@ -113,7 +113,7 @@ Push the slider past 1500 and watch the error climb — that is the point.
 
 ```
 .venv\Scripts\python surrogate\export_web.py         # writes docs/model/ (2.7 MB modes + 22 verification runs)
-.venv\Scripts\python surrogateender_gif.py         # writes figures/cavity.gif (the animation above)
+.venv\Scripts\python surrogate\render_gif.py         # writes figures/cavity.gif (the animation above)
 py -3.12 -m http.server 8792 --directory docs        # local: http://localhost:8792
 ```
 
